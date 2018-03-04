@@ -5,6 +5,7 @@
 const AWS = require('aws-sdk');
 const NAMES_TABLE = process.env.NAMES_TABLE;
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const rekognition = new AWS.Rekognition();
 
 module.exports.addWord = (event, context, callback) => {
   let response = {
@@ -70,4 +71,103 @@ module.exports.getWord = (event, context, callback) => {
     response.body = JSON.stringify({error: 'Could not retrieve word'})
     callback(null, response);
   });
+}
+
+/*
+function addToFacesTable() {
+  let labels = [];
+
+  labelData.forEach((label) => {
+    labels.push(label.Name);
+  });
+
+  let emotions = faceDetails[0]["Emotions"];
+  let ageRange = faceDetails[0]["AgeRange"];
+  let gender = faceDetails[0]["Gender"];
+
+  console.log(emotions + " " + ageRange + " " + gender);
+
+  let params = {
+    TableName: config.dynamo.tableName,
+    Item: {
+      faceId: 1,
+      filename: key.split(".")[0],
+      timestamp: new Date().getTime(),
+      emotionType1: emotions[0].Type,
+      emotionConf1: emotions[0].Confidence,
+      emotionType2: emotions[1].Type,
+      emotionConf2: emotions[1].Confidence,
+      ageLow: ageRange.Low,
+      ageHigh: ageRange.High,
+      genderValue: gender.Value,
+      genderConf: gender.Confidence,
+      labels: labels
+    }
+  };
+
+  //return docClient.put(params).promise();
+
+  return new Promise((resolve, reject) => {
+    resolve({});
+  });
+}
+*/
+
+function rekognizeFace(bucket, key) {
+  let params = {
+    Attributes: ["ALL"],
+    Image: {
+      S3Object: {
+        Bucket: bucket,
+        Name: key
+      }
+    }
+  };
+
+  console.log(params);
+
+  return rekognition.detectFaces(params).promise();
+}
+
+function rekognizeLabels(bucket, key) {
+  let params = {
+    Image: {
+      S3Object: {
+        Bucket: bucket,
+        Name: key
+      }
+    },
+    MaxLabels: 3,
+    MinConfidence: 80
+  };
+
+  console.log(params);
+  console.log("----------------------");
+
+  return rekognition.detectLabels(params).promise();
+}
+
+module.exports.addedImage = (event, context, callback) => {
+  console.log('ENTERING ADDED IMAGE');
+  const bucket = event.Records[0].s3.bucket.name;
+  const key = event.Records[0].s3.object.key;
+
+  console.log(`Added image to S3 ${bucket}:${key}`);
+
+  rekognizeLabels(bucket, key).then((data) => {
+    labelData = data['Labels'];
+    return rekognizeFace(bucket, key);
+  }).then((data) => {
+    callback(null, data);
+  }).catch((err) => {
+    console.log(err);
+    callback(err, null);
+  });
+
+  /*
+  .then((faceData) => {
+    faceDetails = faceData['FaceDetails'];
+    return addToFacesTable();
+  })
+  */
 }

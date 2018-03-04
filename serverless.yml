@@ -10,6 +10,8 @@ provider:
       Action:
         - dynamodb:GetItem
         - dynamodb:PutItem
+        - s3:*
+        - rekognition:*
       Resource:
         - { "Fn::GetAtt": ["VocabularyDynamoDBTable", "Arn" ] }
   environment:
@@ -30,6 +32,12 @@ functions:
           path: word
           method: get
           cors: true
+  addedImage:
+    handler: handler.addedImage
+    events:
+      - s3:
+          bucket: vocabulary-images
+          event: s3:ObjectCreated:*
 
 resources:
   Resources:
@@ -47,3 +55,32 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+    # S3BucketPhotos:
+    #   Type: AWS::S3::Bucket
+    #   Properties:
+    #     BucketName: 'vocabulary-images'
+    #     AccessControl: Private
+    #     CorsConfiguration:
+    #       CorsRules:
+    #       - AllowedMethods:
+    #         - GET
+    #         - PUT
+    #         - POST
+    #         - HEAD
+    #         AllowedOrigins:
+    #         - "*"
+    #         AllowedHeaders:
+    #         - "*"
+
+    # ResizeLambdaPermissionPhotosS3:
+    #   Type: "AWS::Lambda::Permission"
+    #   Properties:
+    #     FunctionName:
+    #       "Fn::GetAtt":
+    #         - ResizeLambdaFunction
+    #         - Arn
+    #     Principal: "s3.amazonaws.com"
+    #     Action: "lambda:InvokeFunction"
+    #     SourceAccount:
+    #       Ref: AWS::AccountId
+    #     SourceArn: "arn:aws:s3:::my-custom-bucket-name"
