@@ -7,6 +7,9 @@ const NAMES_TABLE = process.env.NAMES_TABLE;
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 const rekognition = new AWS.Rekognition();
 
+let faceDetails,
+  labelData;
+
 module.exports.addWord = (event, context, callback) => {
   let response = {
     statusCode: 200,
@@ -73,7 +76,6 @@ module.exports.getWord = (event, context, callback) => {
   });
 }
 
-/*
 function addToFacesTable() {
   let labels = [];
 
@@ -85,8 +87,9 @@ function addToFacesTable() {
   let ageRange = faceDetails[0]["AgeRange"];
   let gender = faceDetails[0]["Gender"];
 
-  console.log(emotions + " " + ageRange + " " + gender);
+  console.log(emotions, ageRange, gender);
 
+  /*
   let params = {
     TableName: config.dynamo.tableName,
     Item: {
@@ -105,13 +108,13 @@ function addToFacesTable() {
     }
   };
 
-  //return docClient.put(params).promise();
+  return dynamoDb.put(params).promise();
+  */
 
   return new Promise((resolve, reject) => {
     resolve({});
   });
 }
-*/
 
 function rekognizeFace(bucket, key) {
   let params = {
@@ -157,17 +160,16 @@ module.exports.addedImage = (event, context, callback) => {
   rekognizeLabels(bucket, key).then((data) => {
     labelData = data['Labels'];
     return rekognizeFace(bucket, key);
+  }).then((faceData) => {
+    console.log(faceData);
+    faceDetails = faceData['FaceDetails'];
+    return addToFacesTable();
   }).then((data) => {
+    console.log('COMPLETED');
     callback(null, data);
   }).catch((err) => {
     console.log(err);
     callback(err, null);
   });
 
-  /*
-  .then((faceData) => {
-    faceDetails = faceData['FaceDetails'];
-    return addToFacesTable();
-  })
-  */
 }

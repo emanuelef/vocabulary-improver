@@ -10,10 +10,18 @@ provider:
       Action:
         - dynamodb:GetItem
         - dynamodb:PutItem
-        - s3:*
-        - rekognition:*
       Resource:
         - { "Fn::GetAtt": ["VocabularyDynamoDBTable", "Arn" ] }
+    - Effect: Allow
+      Action:
+        - s3:*
+      Resource:
+        - "*"
+    - Effect: Allow
+      Action:
+        - rekognition:*
+      Resource:
+        - "*"
   environment:
     NAMES_TABLE: { "Ref": "VocabularyDynamoDBTable" }
 
