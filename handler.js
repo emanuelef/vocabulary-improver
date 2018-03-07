@@ -116,6 +116,27 @@ function addToFacesTable() {
   });
 }
 
+function analyseResponse(textDetections) {
+  return new Promise((resolve, reject) => {
+    resolve(textDetections
+      .filter(detection => detection.Type == 'WORD' && detection.Confidence >= 85)
+      .map(detection => detection.DetectedText));
+  });
+}
+
+function recognizeText(bucket, key) {
+  let params = {
+    Image: {
+      S3Object: {
+        Bucket: bucket,
+        Name: key
+      }
+    }
+  };
+
+  return rekognition.detectText(params).promise();
+}
+
 function rekognizeFace(bucket, key) {
   let params = {
     Attributes: ["ALL"],
@@ -157,6 +178,7 @@ module.exports.addedImage = (event, context, callback) => {
 
   console.log(`Added image to S3 ${bucket}:${key}`);
 
+  /*
   rekognizeLabels(bucket, key).then((data) => {
     labelData = data['Labels'];
     return rekognizeFace(bucket, key);
@@ -167,6 +189,18 @@ module.exports.addedImage = (event, context, callback) => {
   }).then((data) => {
     console.log('COMPLETED');
     callback(null, data);
+  }).catch((err) => {
+    console.log(err);
+    callback(err, null);
+  });
+  */
+
+  recognizeText(bucket, key).then((data) => {
+    console.log(data);
+    return analyseResponse(data['TextDetections']);
+  }).then((result) => {
+    console.log(result);
+    callback(null, result);
   }).catch((err) => {
     console.log(err);
     callback(err, null);
